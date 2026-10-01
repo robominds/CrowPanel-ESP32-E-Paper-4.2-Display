@@ -41,6 +41,16 @@ constexpr uint8_t BTN_DOWN = 4;    // K5 rotary switch, down
 constexpr uint8_t BTN_OK   = 5;    // K5 rotary switch, pressed
 
 // ---------------------------------------------------------------------------
+// I2C on the 2x10 header, for an external AHT10. GPIO8/9 are also the
+// Arduino-ESP32-S3 default SDA/SCL. There is no on-board I2C device, so the
+// bus belongs to whatever is plugged in. 100 kHz: the sensor sits on flying
+// leads, and ten-second samples need no speed.
+// ---------------------------------------------------------------------------
+constexpr uint8_t  I2C_SDA = 8;    // header row B, pin 20
+constexpr uint8_t  I2C_SCL = 9;    // header row A, pin 2
+constexpr uint32_t I2C_HZ  = 100000;
+
+// ---------------------------------------------------------------------------
 // Red LED D1, active HIGH. Elecrow's code calls GPIO41 "power control"; on the
 // schematic it drives only this LED. Kept off: the panel is read in a dark
 // room too.

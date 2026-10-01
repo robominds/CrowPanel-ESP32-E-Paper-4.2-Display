@@ -10,10 +10,18 @@ and shows the same readings:
   clock, so after a power cut the clock reads `--:--` until Wi-Fi is up.
 - **Maple Valley outdoors**, from the [Open-Meteo](https://open-meteo.com/)
   public API over plain HTTP. No API key.
-- **Mark's office indoors**, subscribed from the MQTT broker
-  (`MarkOffice/DHT/tempc` and `MarkOffice/DHT/hum`). The board has no
-  temperature sensor of its own; the room, its label and its topics come from
-  `secrets.ini`.
+- **Indoors**, from one of two places, decided at boot:
+  - **An AHT10 on the header** (SDA GPIO8, SCL GPIO9). The panel shows it and
+    publishes every ten-second sample to the broker. This unit is configured
+    as **JennOffice**, publishing `JennOffice/AHT10/tempc` and
+    `JennOffice/AHT10/hum` as bare decimals.
+  - **No sensor answers**: the panel subscribes to the same topics instead, for
+    example `MarkOffice/DHT/tempc` and `/hum` to show Mark's office.
+
+  The room's label, its topics and the panel's network name come from
+  `secrets.ini`. The serial log says which role the panel took:
+  `aht10: found at 0x38 (status 0x18), publishing JennOffice/AHT10/tempc`, or
+  `aht10: no sensor at 0x38, reading the broker instead`.
 
 ## The two views
 
@@ -25,7 +33,7 @@ humidity and a caption.
 history lives in RAM and starts empty after every boot or update.
 
 A reading whose source has gone quiet keeps its last number but is struck
-through and marked `stale`: after a minute of broker silence for the office,
+through and marked `stale`: after a minute without an indoor reading,
 after 45 minutes for the weather. A reading that has never arrived shows `--`.
 A status line along the bottom appears only when Wi-Fi or the broker is down.
 
@@ -50,7 +58,7 @@ loop". Each pass builds a text description of what the panel should say
 - **The clock ticking over a minute**, or a change a reader would act on (a
   source going stale, the first reading arriving, units, view): a partial
   refresh right away, about 0.6 s on this panel.
-- **Only numbers moving** (the office publishes every ten seconds): at most one
+- **Only numbers moving** (the indoor reading arrives every ten seconds): at most one
   partial refresh a minute, which in practice rides along with the clock.
 - **Every 30th refresh, a view change, or the dial press**: a full refresh,
   about 3.1 s with the black-white flash, which clears partial-refresh
@@ -85,12 +93,12 @@ To skip the probe, add `-DEPD_PANEL_SSD1683` or `-DEPD_PANEL_UC8276` to
 cp secrets.ini.example secrets.ini     # then fill in Wi-Fi and OTA password
 pio run -e epaper42 -t upload          # build and flash over USB
 pio run -e epaper42_ota -t upload      # afterwards: update over WiFi
-pio test -e native                     # 99 host tests, no hardware needed
+pio test -e native                     # 108 host tests, no hardware needed
 ```
 
-`secrets.ini` holds the Wi-Fi credentials, the MQTT broker and the office
+`secrets.ini` holds the Wi-Fi credentials, the MQTT broker and the indoor
 topics, both captions, the weather coordinates, and the over-the-air hostname
-(`epaper-display` by default) and password. It is gitignored. Put every value
+(`JennOffice-Display` on this unit) and password. It is gitignored. Put every value
 except `mqtt_port` in double quotes, and keep `"`, `'`, `\`, `$`, `` ` `` and
 `;` out of the values. Every environment reads it, the host tests included;
 for those, the unedited example is enough.
@@ -107,7 +115,11 @@ shows up on macOS as `/dev/cu.wchusbserial*` with no extra driver.
 
 The partition table is `default_8MB.csv`, the same as the factory firmware's:
 two 3.2 MB app slots. After the first USB flash,
-`pio run -e epaper42_ota -t upload` sends the build to `epaper-display.local`.
+`pio run -e epaper42_ota -t upload` sends the build to
+`<device_host>.local`, here `JennOffice-Display.local`. Changing `device_host`
+needs one push to the OLD name, because the running firmware answers only to
+the name it was built with:
+`pio run -e epaper42_ota -t upload --upload-port <old-name>.local`.
 The panel shows "Updating firmware" once at the start and "Restarting" at the
 end. It draws no progress bar, because every partial refresh would stall the
 transfer. A new image is confirmed 30 s after Wi-Fi comes up. One that crashes
@@ -124,12 +136,14 @@ traffic is authenticated but not encrypted. Use it on a network you trust.
 | `lib/frame/` | The text each view prints, and the refresh policy. Pure C++, host-tested. |
 | `lib/button/` | Debouncing that reports one event per press. Pure C++, host-tested. |
 | `lib/history/`, `lib/channel/`, `lib/parse/` | Sample history, per-channel staleness, and MQTT/Open-Meteo parsing, shared with the 7-inch project. |
-| `test/` | 99 host tests across the five libraries. |
+| `lib/aht10/` | The AHT10's six-byte frame, converted and sanity-checked. Shared with the 7-inch project. |
+| `test/` | 108 host tests across the six libraries. |
 | `src/board_pins.h` | Every GPIO, named, with its schematic net. |
 | `src/ui.*` | Panel detection, the two views and the update messages, through GxEPD2 and U8g2 fonts. |
 | `src/net.*` | Wi-Fi with non-blocking reconnection. |
 | `src/clock.*` | Timezone and SNTP; there is no RTC chip. |
-| `src/source_mqtt.*` | The office reading, subscribed from the broker. |
+| `src/source_aht10.*` | The local AHT10: probe at boot, then a non-blocking ten-second sample. |
+| `src/source_mqtt.*` | The indoor reading: published when the AHT10 is fitted, subscribed otherwise. |
 | `src/source_weather.*` | The Maple Valley reading, polled from Open-Meteo every 15 minutes. |
 | `src/settings.*` | View and units, persisted in NVS. |
 | `src/update_screen.*` | What the panel shows during an over-the-air update. |
@@ -150,7 +164,7 @@ and no sensors. Twelve spare GPIOs are on the 2x10 header. Everything is in
 
 ## Verified so far
 
-- `pio test -e native`: 99 host tests pass.
+- `pio test -e native`: 108 host tests pass.
 - `pio run -e epaper42` builds: flash 1,335,003 of 3,342,336 bytes (39.9%, one
   OTA slot); internal RAM 60,432 of 327,680 bytes (18.4%).
 - Hardware bring-up, 2026-09-30, over USB at 230400:
@@ -171,6 +185,13 @@ and no sensors. Twelve spare GPIOs are on the 2x10 header. Everything is in
     next reset. The first push attempt failed at 0% with "Connection reset by
     peer"; the retry a minute later succeeded with the same build, and the
     cause is not yet known.
+  - AHT10 on the header, 2026-09-30 evening: found at 0x38 with status
+    `0x18` (already calibrated), the same reading as the bedroom panel's
+    module, which is an AHT20-family die sold as an AHT10. The panel
+    publishes `JennOffice/AHT10/tempc` and `/hum` every ten seconds, and a
+    `mosquitto_sub` on the broker received them (23.5 C, 48.1 %). The renamed
+    firmware answers to `JennOffice-Display.local` and was confirmed after an
+    over-the-air push.
 
 ## License
 

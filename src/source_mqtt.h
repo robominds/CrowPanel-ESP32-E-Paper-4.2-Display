@@ -1,11 +1,11 @@
-// The indoor temperature, from the MQTT broker.
+// The indoor temperature, to or from the MQTT broker.
 //
-// This board has no temperature sensor, so the indoor reading is always some
-// other device's: by default the DHT in Mark's office, which publishes
-// MarkOffice/DHT/tempc and MarkOffice/DHT/hum. secrets.ini names the two
-// topics, temperature in Celsius and relative humidity. The broker publishes
-// bare decimal ASCII, not JSON, about every ten seconds, and accepts anonymous
-// connections.
+// secrets.ini names two topics, temperature in Celsius and relative humidity,
+// carried as bare decimal ASCII, not JSON, about every ten seconds. The broker
+// accepts anonymous connections. Which way the readings flow depends on the
+// board: one with an AHT10 on its header publishes its own readings to those
+// topics (JennOffice/AHT10/...), one without subscribes to another device's
+// (MarkOffice/DHT/...).
 //
 // Temperature and humidity arrive as two separate messages. A history sample is
 // appended when a temperature lands, carrying the most recent humidity, so the
@@ -24,9 +24,19 @@
 
 namespace source_mqtt {
 
-// Binds the channel that incoming readings are written into. The channel must
-// outlive this module.
-void begin(channel::Channel& indoor);
+// Subscribe: the broker owns the indoor reading.
+// PublishOnly: this panel owns it, reads it locally and writes it to the same
+// two topics. A publishing panel never subscribes, so it cannot feed itself.
+enum class Mode { Subscribe, PublishOnly };
+
+// Binds the channel that incoming readings are written into, and the role this
+// panel takes. The channel must outlive this module.
+void begin(channel::Channel& indoor, Mode mode);
+
+// PublishOnly only: writes one reading to the two configured topics, as bare
+// decimals with one decimal place, QoS 0 and not retained. A no-op while
+// disconnected - nothing is queued, the next sample is ten seconds away.
+void publish(float temperature_c, float humidity_pct);
 
 // Call every loop. Handles connection, reconnection with backoff, and message
 // dispatch. Cheap when connected and idle.

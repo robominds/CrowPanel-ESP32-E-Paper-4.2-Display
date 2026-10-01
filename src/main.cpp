@@ -1,8 +1,9 @@
 // Temperature clock for the Elecrow CrowPanel ESP32 E-Paper HMI 4.2".
 //
 // The time, the outdoor temperature for Maple Valley from Open-Meteo, and the
-// indoor temperature from Mark's office via the MQTT broker - the board has no
-// sensor of its own. A second view charts both over twelve hours. The buttons
+// indoor temperature: from an AHT10 on the header when one is fitted, which
+// the panel also publishes to the broker, or else from another room's sensor
+// via the broker. A second view charts both over twelve hours. The buttons
 // switch views and units.
 //
 // The firmware is built around one fact: an e-paper refresh is expensive. The
@@ -14,6 +15,7 @@
 // Written with assistance from Claude Code (Anthropic).
 
 #include <Arduino.h>
+#include <Wire.h>
 #include <ota.h>
 
 #include <new>
@@ -25,6 +27,7 @@
 #include "clock.h"
 #include "net.h"
 #include "settings.h"
+#include "source_aht10.h"
 #include "source_mqtt.h"
 #include "source_weather.h"
 #include "ui.h"
@@ -215,8 +218,16 @@ void setup() {
     ota_config.running_version = FW_VERSION;
     ota::begin(ota_config, g_update_screen);
 
+    // Which role this panel takes is a question for the bus, not a build flag:
+    // a panel with an AHT10 on the header shows and publishes its own reading,
+    // a panel without one reads the same topics from the broker.
+    Wire.begin(board::I2C_SDA, board::I2C_SCL, board::I2C_HZ);
+    const bool local_sensor = source_aht10::begin();
+
     net::begin();
-    source_mqtt::begin(*g_channels[1]);
+    source_mqtt::begin(*g_channels[1], local_sensor
+                                           ? source_mqtt::Mode::PublishOnly
+                                           : source_mqtt::Mode::Subscribe);
     source_weather::begin(*g_channels[0]);
 
     // First picture straight away: the clock and readings show dashes until
@@ -236,6 +247,14 @@ void loop() {
     clock_source::poll(net::connected());
     source_mqtt::poll();
     source_weather::poll();
+
+    // One sample feeds the panel and the broker. A failed publish is dropped
+    // rather than queued: the next sample is ten seconds away.
+    float sensor_c = 0.0f, sensor_rh = 0.0f;
+    if (source_aht10::poll(sensor_c, sensor_rh)) {
+        g_channels[1]->update(sensor_c, sensor_rh, millis());
+        source_mqtt::publish(sensor_c, sensor_rh);
+    }
 
     pollButtons();
     pollDisplay();

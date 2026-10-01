@@ -412,3 +412,11 @@ Still unverified: partial-refresh residue over long runs on this UC8276C, the
 microSD card, deep-sleep current, and the battery
 path.
 
+### External AHT10 on the header (2026-09-30)
+
+An AHT10 module was wired to the 2x10 header: SDA to GPIO8, SCL to GPIO9,
+plus 3V3 and GND. The firmware runs the bus at 100 kHz. The sensor answered at
+0x38 with status `0x18`, calibrated already, so no init command was sent; that
+status is the signature of an AHT20/AHT21 die sold as an AHT10, which rejects
+the AHT10's `0xE1` init opcode. `src/source_aht10.cpp` handles both.
+
