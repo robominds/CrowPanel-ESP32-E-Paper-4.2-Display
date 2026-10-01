@@ -165,7 +165,7 @@ and no sensors. Twelve spare GPIOs are on the 2x10 header. Everything is in
     subscribed to the office topics, and Open-Meteo returned Maple Valley.
     Partial refreshes measured 0.60 s busy (about 0.83 s including power
     on/off), full refreshes 3.09 s.
-  - The clock view, checked by eye on the panel, renders as designed.
+  - Both views and the buttons, checked on the panel, work as designed.
   - Over-the-air push to `epaper-display.local`: the image went to app1 and
     was confirmed after the 30 s window, and it reported `confirmed` on the
     next reset. The first push attempt failed at 0% with "Connection reset by

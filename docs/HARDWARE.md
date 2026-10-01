@@ -405,7 +405,10 @@ no extra driver needed), esptool v5.3.0.
 | Network | Wi-Fi, SNTP, MQTT and Open-Meteo all working; OTA push to app1 confirmed after 30 s |
 | Gotcha | GxEPD2 writes CS (45) and DC (46) before `pinMode()`, which core 3.x logs as `IO 45 is not set as GPIO`. Harmless; the firmware sets both as outputs first |
 
+The buttons (view, units, full refresh) and the chart view were checked on
+the panel the same evening.
+
 Still unverified: partial-refresh residue over long runs on this UC8276C, the
-buttons on hardware, the microSD card, deep-sleep current, and the battery
+microSD card, deep-sleep current, and the battery
 path.
 
