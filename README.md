@@ -161,6 +161,15 @@ and no sensors. Twelve spare GPIOs are on the 2x10 header. Everything is in
     return of a mismatched driver.
   - The factory image (bootloader through app0) is backed up locally under
     `backup/`, which is gitignored.
+  - On the network: Wi-Fi associated, SNTP set the clock within seconds, MQTT
+    subscribed to the office topics, and Open-Meteo returned Maple Valley.
+    Partial refreshes measured 0.60 s busy (about 0.83 s including power
+    on/off), full refreshes 3.09 s.
+  - Over-the-air push to `epaper-display.local`: the image went to app1 and
+    was confirmed after the 30 s window, and it reported `confirmed` on the
+    next reset. The first push attempt failed at 0% with "Connection reset by
+    peer"; the retry a minute later succeeded with the same build, and the
+    cause is not yet known.
 
 ## License
 

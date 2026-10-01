@@ -401,6 +401,8 @@ no extra driver needed), esptool v5.3.0.
 | Panel controller | BUSY high in 20 of 20 samples over 100 ms after reset, so **UC8276C (V1.2)**. The case was not opened to read the silkscreen |
 | Refresh timing, `GxEPD2_420_SE0420NQ04` | power on 62 ms, full refresh 3.09 s, power off 40 ms |
 | Firmware on core 3.3.9 (pioarduino 55.03.39) with `qio_opi` | Boots, OTA kit reports `app0, serial-flashed`, the panel draws |
+| Partial refresh, same driver | 0.60 s busy, about 0.83 s including power on and off. On the UC8276C a "partial" refresh is a full-screen differential update |
+| Network | Wi-Fi, SNTP, MQTT and Open-Meteo all working; OTA push to app1 confirmed after 30 s |
 | Gotcha | GxEPD2 writes CS (45) and DC (46) before `pinMode()`, which core 3.x logs as `IO 45 is not set as GPIO`. Harmless; the firmware sets both as outputs first |
 
 Still unverified: partial-refresh residue over long runs on this UC8276C, the
