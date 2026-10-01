@@ -1,0 +1,5 @@
+{
+  "name": "frame",
+  "version": "1.0.0",
+  "description": "The text each e-paper view prints, and the policy deciding when a partial or full refresh is worth it. Pure C++17, host-testable."
+}

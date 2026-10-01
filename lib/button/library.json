@@ -1,0 +1,5 @@
+{
+  "name": "button",
+  "version": "1.0.0",
+  "description": "Push-button debouncing that reports one event per stable press. Pure C++17, host-testable."
+}

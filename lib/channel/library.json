@@ -1,0 +1,8 @@
+{
+  "name": "channel",
+  "version": "1.0.0",
+  "description": "One data channel: name, latest reading, per-channel staleness rule, and its sample history. Pure C++17, host-testable.",
+  "dependencies": {
+    "history": "*"
+  }
+}
